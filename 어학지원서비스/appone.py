@@ -48,11 +48,11 @@ if api_key_input:
             try:
                 # GPT-3.5-turbo 모델을 사용한 번역 요청 (베트남어 ↔ 한국어)
                 response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "Translate Korean input to Vietnamese and Vietnamese input to Korean. Do not use English."},
-                    {"role": "user", "content": input_text}
-                ]
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "Translate Korean input to Vietnamese and Vietnamese input to Korean. Do not use English."},
+                        {"role": "user", "content": input_text}
+                    ]
                 )
 
                 # 번역 결과 저장 및 표시
@@ -99,10 +99,28 @@ if api_key_input:
                     f"<div style='background-color:#FFEFD5; padding:10px; border-radius:10px; font-size: 18px; font-family: Arial, sans-serif; margin-bottom: 20px;'>{grammar_check}</div>",
                     unsafe_allow_html=True
                 )
-                
+
+                # 존댓말로 변환 기능 추가
+                st.write("### 존댓말로 변환:")
+                honorific_response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "Convert the following text to polite form (존댓말) in Korean. Do not use Vietnamese or English."},
+                        {"role": "user", "content": input_text}
+                    ]
+                )
+                honorific_conversion = honorific_response.choices[0].message['content']
+
+                # 존댓말 변환 결과 박스화
+                st.markdown(
+                    f"<div style='background-color:#FAFAD2; padding:10px; border-radius:10px; font-size: 18px; font-family: Arial, sans-serif; margin-bottom: 20px;'>{honorific_conversion}</div>",
+                    unsafe_allow_html=True
+                )
+
                 # 결과를 history에 저장
                 st.session_state['history'][-1]['explanation'] = explanation
                 st.session_state['history'][-1]['grammar_check'] = grammar_check
+                st.session_state['history'][-1]['honorific_conversion'] = honorific_conversion
 
             except openai.error.AuthenticationError:
                 st.error("API 키가 올바르지 않습니다. 다시 확인해 주세요.")
@@ -123,6 +141,7 @@ if api_key_input:
             history_str += f"대화 {idx+1}:\n입력: {entry['input']}\n번역: {entry['output']}\n"
             history_str += f"설명: {entry.get('explanation', '없음')}\n"
             history_str += f"문법 오류 검사 및 문장 다듬기: {entry.get('grammar_check', '없음')}\n"
+            history_str += f"존댓말 변환: {entry.get('honorific_conversion', '없음')}\n"
             history_str += "\n" + ("-"*50) + "\n"
         
         # 대화 기록을 문서화하여 다운로드 버튼 생성
@@ -134,17 +153,21 @@ if api_key_input:
                 mime="text/plain"
             )
 
-    # 대화 기록 표시
+    # 대화 기록 표시 (박스 처리)
     if st.session_state['history']:
         st.write("## 대화 기록")
         for idx, entry in enumerate(st.session_state['history']):
-            st.write(f"**{idx+1}. 입력:** {entry['input']}")
+            st.markdown(f"### **대화 {idx+1}**")
             st.markdown(
-                f"<div style='background-color:#F9F9F9; padding:10px; border-radius:10px; font-size: 18px; font-family: Arial, sans-serif; margin-bottom: 20px;'>{entry['output']} 🎙️</div>",
+                f"<div style='background-color:#F9F9F9; padding:10px; border-radius:10px; font-size: 18px; font-family: Arial, sans-serif; margin-bottom: 20px;'>"
+                f"**입력:** {entry['input']}<br>"
+                f"**번역:** {entry['output']} 🎙️<br>"
+                f"**설명:** {entry.get('explanation', '없음')}<br>"
+                f"**문법 오류 검사 및 문장 다듬기:** {entry.get('grammar_check', '없음')}<br>"
+                f"**존댓말 변환:** {entry.get('honorific_conversion', '없음')}"
+                "</div>",
                 unsafe_allow_html=True
             )
-            st.write(f"**설명:** {entry.get('explanation', '없음')}")
-            st.write(f"**문법 오류 검사 및 문장 다듬기:** {entry.get('grammar_check', '없음')}")
             st.write("---")
 
 else:
